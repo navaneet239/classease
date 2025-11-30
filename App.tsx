@@ -91,7 +91,7 @@ const App: React.FC = () => {
               <GraduationCap strokeWidth={1.5} className="w-5 h-5 md:w-6 md:h-6" />
             </div>
             <div className="flex flex-col">
-              <span className="font-serif font-bold text-xl tracking-tight leading-none text-primary dark:text-white">ClassEase</span>
+              <span className="font-serif font-bold text-xl tracking-tight leading-none text-primary dark:text-white">ClassEase AI</span>
               <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400 dark:text-stone-500 font-medium hidden md:block mt-1">Academic Intelligence</span>
             </div>
           </div>
@@ -105,7 +105,7 @@ const App: React.FC = () => {
              </button>
              <div className="hidden md:flex items-center space-x-2 text-xs font-semibold text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-4 py-2 rounded-full">
                 <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span>Powered by Gemini 2.5</span>
+                <span>Powered by <span className="font-serif">VERRION</span></span>
              </div>
           </div>
         </div>
@@ -122,16 +122,16 @@ const App: React.FC = () => {
             <div className="text-center mb-16 max-w-4xl mx-auto">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm text-xs font-semibold text-stone-500 dark:text-stone-400 mb-8 animate-in fade-in zoom-in delay-150 duration-700">
                     <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
-                    <span>New: Intelligent Audio Summaries</span>
+                    <span>New: Keywords ToolTips</span>
                 </div>
-                
+                <p className="text-xs text-stone-400 dark:text-stone-600 font-medium uppercase tracking-widest mb-1">Made By Students • Made for students</p>
                 <h1 className="text-5xl md:text-7xl font-serif font-medium text-primary dark:text-white mb-8 leading-[1.1] tracking-tight">
                   Turn textbooks into <br/>
                   <span className="text-stone-400 dark:text-stone-500 italic">interactive insights.</span>
                 </h1>
                 
                 <p className="text-lg md:text-xl text-stone-600 dark:text-stone-400 font-light max-w-2xl mx-auto leading-relaxed mb-12">
-                  Upload chapters or notes. Get structured breakdowns, key formulas, and an always-available AI tutor—tailored for the CBSE curriculum.
+                  Get structured breakdowns, key formulas, and an always-available AI tutor, tailored for the educational curriculum.
                 </p>
                 
                 {/* Input Form Floating Card */}
@@ -178,9 +178,14 @@ const App: React.FC = () => {
             
             {/* Footer */}
             <div className="mt-20 text-center">
-                <p className="text-xs text-stone-400 dark:text-stone-600 font-medium uppercase tracking-widest">Made By Students • Made for students</p>
-            </div>
-          </div>
+            {/* Copyright Notice */}
+                <p className="text-xs text-stone-400 dark:text-stone-600 font-medium uppercase tracking-widest text-center">© 2024 ClassEase AI. All rights reserved.</p>
+          
+                <div className="flex flex-col mt-6">
+                  <span className="font-serif font-bold text-xl tracking-tight leading-none text-primary dark:text-white">ClassEase AI</span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400 dark:text-stone-500 font-medium hidden md:block mt-1">Academic Intelligence</span>
+                </div>
+            </div></div>
         )}
 
         {/* GENERATING STATE */}
