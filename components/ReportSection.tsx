@@ -10,6 +10,7 @@ interface ReportSectionProps {
   rawTextForAudio?: string; 
   defaultOpen?: boolean;
   keyTerms?: KeyTerm[];
+  contentClassName?: string;
 }
 
 const ReportSection: React.FC<ReportSectionProps> = ({ 
@@ -17,7 +18,8 @@ const ReportSection: React.FC<ReportSectionProps> = ({
   content, 
   rawTextForAudio, 
   defaultOpen = true,
-  keyTerms = []
+  keyTerms = [],
+  contentClassName = ""
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -27,7 +29,7 @@ const ReportSection: React.FC<ReportSectionProps> = ({
     const htmlContent = renderMarkdownWithTooltips(text, keyTerms);
     return (
       <div 
-        className="prose prose-stone dark:prose-invert max-w-none prose-p:text-stone-600 dark:prose-p:text-stone-300 prose-headings:text-stone-800 dark:prose-headings:text-stone-100 prose-strong:text-stone-900 dark:prose-strong:text-white prose-ul:list-disc prose-ul:pl-4 prose-a:text-accent"
+        className={`prose prose-stone dark:prose-invert max-w-none prose-p:text-stone-600 dark:prose-p:text-stone-300 prose-headings:text-stone-800 dark:prose-headings:text-stone-100 prose-strong:text-stone-900 dark:prose-strong:text-white prose-ul:list-disc prose-ul:pl-4 prose-a:text-accent ${contentClassName}`}
         dangerouslySetInnerHTML={{ __html: htmlContent }} 
       />
     );

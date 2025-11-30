@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, Sparkles, Loader2, Bot, Trash2, Copy, RefreshCw, Pencil, Check, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { Send, User, Sparkles, Loader2, Bot, Trash2, Copy, RefreshCw, Pencil } from 'lucide-react';
 import { ChapterReport } from '../types';
 import { createChatSession, ChatSession } from '../services/geminiService';
 import { parse } from 'marked';
@@ -14,7 +14,13 @@ interface Message {
   content: string;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ report }) => {
+export interface ChatInterfaceHandle {
+  setInput: (text: string) => void;
+  sendQuery: (text: string) => void;
+  focus: () => void;
+}
+
+const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ report }, ref) => {
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -26,6 +32,43 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ report }) => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Internal helper to handle the actual sending logic
+  const processMessage = async (text: string) => {
+    // If we receive a message but session isn't ready, we might need to queue it or retry.
+    // However, usually session is ready quickly. 
+    if (!text.trim() || !chatSession || isLoading) return;
+
+    const userMsg = text.trim();
+    setInputValue(''); // Clear input if it matches
+    
+    // Add user message to UI immediately
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setIsLoading(true);
+
+    try {
+      const response = await chatSession.sendMessage(userMsg);
+      setMessages(prev => [...prev, { role: 'model', content: response }]);
+    } catch (error) {
+      console.error("Chat failed", error);
+      setMessages(prev => [...prev, { role: 'model', content: "Sorry, I had trouble connecting. Please try again." }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Expose methods to parent
+  useImperativeHandle(ref, () => ({
+    setInput: (text: string) => {
+      setInputValue(text);
+    },
+    sendQuery: (text: string) => {
+      processMessage(text);
+    },
+    focus: () => {
+      inputRef.current?.focus();
+    }
+  }));
 
   // Initialize Chat
   useEffect(() => {
@@ -44,6 +87,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ report }) => {
     setMessages(history);
   };
 
+  // LISTENER FOR ASK TUTOR POPUP
+  useEffect(() => {
+    const checkForPendingQuery = () => {
+      const pendingQuery = localStorage.getItem('classease_pending_query');
+      if (pendingQuery && chatSession && !isLoading) {
+        // Clear immediately to prevent double processing
+        localStorage.removeItem('classease_pending_query');
+        processMessage(pendingQuery);
+      }
+    };
+
+    // Check immediately (useful if component just mounted due to tab switch)
+    checkForPendingQuery();
+
+    // Listen for custom trigger from ReportView
+    const handleTrigger = () => checkForPendingQuery();
+    window.addEventListener('classease-chat-trigger', handleTrigger);
+
+    return () => {
+      window.removeEventListener('classease-chat-trigger', handleTrigger);
+    };
+  }, [chatSession, isLoading]); // Dependency on chatSession ensures we process it once session is ready
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -52,27 +118,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ report }) => {
     scrollToBottom();
   }, [messages, isLoading, editingIndex]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!inputValue.trim() || !chatSession || isLoading) return;
-
-    const userMsg = inputValue.trim();
-    setInputValue('');
-    
-    // Add user message to UI immediately
-    const newMessages = [...messages, { role: 'user', content: userMsg } as Message];
-    setMessages(newMessages);
-    setIsLoading(true);
-
-    try {
-      const response = await chatSession.sendMessage(userMsg);
-      setMessages(prev => [...prev, { role: 'model', content: response }]);
-    } catch (error) {
-      console.error("Chat failed", error);
-      setMessages(prev => [...prev, { role: 'model', content: "Sorry, I had trouble connecting. Please try again." }]);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    processMessage(inputValue);
   };
 
   // --- Advanced Features ---
@@ -319,6 +367,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ report }) => {
       </div>
     </div>
   );
-};
+});
+
+ChatInterface.displayName = 'ChatInterface';
 
 export default ChatInterface;

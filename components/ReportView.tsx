@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { ChapterReport, FormData, KeyTerm } from '../types';
 import ReportSection from './ReportSection';
 import ChatInterface from './ChatInterface';
-import { Download, ArrowLeft, FileText, Loader2, Bookmark, MessageSquare, BookOpen, GripVertical } from 'lucide-react';
+import { Download, ArrowLeft, FileText, Loader2, Bookmark, MessageSquare, BookOpen, Book, Sparkles, ExternalLink } from 'lucide-react';
 import AudioButton from './AudioButton';
 import { renderMarkdownWithTooltips } from '../utils/textUtils';
 
@@ -15,7 +15,6 @@ interface ReportViewProps {
 type Tab = 'report' | 'chat';
 
 const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) => {
-  const reportRef = useRef<HTMLDivElement>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('report');
   
@@ -23,6 +22,20 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
   const [chatWidth, setChatWidth] = useState(35); // Percentage
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Responsive Check
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Text Selection State
+  const [selectedText, setSelectedText] = useState('');
+  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
+  const [isPopupVisible, setIsPopupVisible] = useState(false);
 
   const startResizing = () => {
     setIsResizing(true);
@@ -43,9 +56,90 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
     }
   };
 
+  // Selection Logic
+  const handleMouseUp = () => {
+    const selection = window.getSelection();
+    
+    // Only proceed if selection exists and is not empty
+    if (!selection || selection.toString().trim().length === 0) {
+      return;
+    }
+
+    // Get selection text
+    const text = selection.toString().trim();
+    if (text.length < 3) {
+      setIsPopupVisible(false);
+      return; 
+    }
+    
+    // Check range count to be safe
+    if (selection.rangeCount === 0) return;
+
+    // Calculate position
+    const range = selection.getRangeAt(0);
+    const rects = range.getClientRects();
+    
+    // Use the FIRST line rect for positioning to avoid "middle of paragraph" issues
+    if (rects.length > 0) {
+      const firstRect = rects[0];
+      setPopupPos({ 
+        x: firstRect.left + (firstRect.width / 2), 
+        y: firstRect.top - 8 
+      });
+      setSelectedText(text);
+      setIsPopupVisible(true);
+    } else {
+        const rect = range.getBoundingClientRect();
+        setPopupPos({ 
+            x: rect.left + (rect.width / 2), 
+            y: rect.top - 10 
+        });
+        setSelectedText(text);
+        setIsPopupVisible(true);
+    }
+  };
+
+  // Handle auto-hiding popup when selection is cleared by user
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        setIsPopupVisible(false);
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, []);
+
+  const handleAskTutor = () => {
+    if (!selectedText) return;
+    
+    const query = `Teach me "${selectedText}"`;
+    
+    // 1. Store the query in LocalStorage
+    localStorage.setItem('classease_pending_query', query);
+    
+    // 2. Dispatch a custom event to notify ChatInterface
+    window.dispatchEvent(new Event('classease-chat-trigger'));
+    
+    // 3. Switch to chat tab if on mobile
+    if (!isDesktop) {
+        setActiveTab('chat');
+    }
+    
+    // 4. Clear selection UI
+    setIsPopupVisible(false);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  // Listen to mouse events for resizing
   useEffect(() => {
     window.addEventListener('mousemove', resize);
     window.addEventListener('mouseup', stopResizing);
+    
     return () => {
       window.removeEventListener('mousemove', resize);
       window.removeEventListener('mouseup', stopResizing);
@@ -63,31 +157,32 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
   };
 
   const handlePdfDownload = async () => {
-    if (!reportRef.current) return;
     setIsDownloadingPdf(true);
+    const element = document.getElementById('report-content');
     
-    // @ts-ignore
-    if (typeof window !== 'undefined' && window.html2pdf) {
-      const element = reportRef.current;
-      const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `${report.chapterTitle.replace(/\s+/g, '_')}_Explainer.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+    // Configure html2pdf options
+    const opt = {
+      margin: [10, 10], // top, left, bottom, right
+      filename: `${report.chapterTitle.replace(/\s+/g, '_')}_Explainer.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        ignoreElements: (element: any) => element.classList.contains('no-print') 
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
 
-      try {
-        // @ts-ignore
-        await window.html2pdf().set(opt).from(element).save();
-      } catch (e) {
-        console.error("PDF generation failed", e);
-        alert("Failed to generate PDF. Please try again.");
-      }
-    } else {
-      alert("PDF generator is initializing, please wait a moment and try again.");
+    try {
+      // @ts-ignore
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF.");
+    } finally {
+      setIsDownloadingPdf(false);
     }
-    setIsDownloadingPdf(false);
   };
 
   const renderMarkdown = (text: string, className: string = "", keyTerms: KeyTerm[] = []) => {
@@ -101,19 +196,17 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
     );
   };
 
-  // Content for the report - abstracted for re-use in both desktop/mobile layouts
+  // Content for the report
   const ReportContent = () => (
-    <div ref={reportRef} className="space-y-8 pb-10">
+    <div id="report-content" className="space-y-8 pb-10" onMouseUp={handleMouseUp}>
       
       {/* Editorial Title Card */}
-      {/* Note: We separate the background (overflow-hidden) from the content (overflow-visible) to let tooltips pop out */}
       <div className="relative bg-primary dark:bg-stone-900 rounded-2xl shadow-2xl shadow-stone-300 dark:shadow-none print:shadow-none print:break-inside-avoid group">
         
         {/* Isolated Background Container */}
-        <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
-           {/* Subtle Accent Decoration */}
-           <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-stone-800 dark:bg-black rounded-full blur-3xl opacity-50 print:hidden"></div>
-           <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 print:hidden"></div>
+        <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none no-print">
+           <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-stone-800 dark:bg-black rounded-full blur-3xl opacity-50"></div>
+           <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
         </div>
 
         {/* Content Container (Visible Overflow for Tooltips) */}
@@ -123,7 +216,6 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
             {inputData.subject}
           </div>
           <h1 className="text-3xl md:text-5xl font-serif font-medium mb-6 leading-tight tracking-tight text-white">{report.chapterTitle}</h1>
-          {/* Overview with Markdown & Tooltips */}
           {renderMarkdown(
             report.overview, 
             "text-stone-300 text-base md:text-lg leading-relaxed prose prose-invert prose-p:text-stone-300/90 prose-strong:text-white prose-headings:text-white",
@@ -132,27 +224,26 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
         </div>
       </div>
 
-      {/* Smart Summary - High Priority */}
+      {/* Smart Summary */}
       <div className="bg-white dark:bg-stone-900 border-l-4 border-accent rounded-r-xl p-6 md:p-8 shadow-premium dark:shadow-none print:break-inside-avoid relative z-20">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-serif text-2xl text-primary dark:text-stone-100 flex items-center gap-3">
             <Bookmark className="w-5 h-5 text-accent fill-current" />
             Teacher's Insight
           </h2>
-          <div data-html2canvas-ignore="true">
+          <div className="no-print">
             <AudioButton text={report.teacherRecap} label="Listen" />
           </div>
         </div>
-        {/* Teacher Recap with Markdown & Tooltips */}
         {renderMarkdown(
           report.teacherRecap,
-          "text-stone-700 dark:text-stone-300 italic text-lg leading-relaxed prose prose-stone dark:prose-invert max-w-none font-serif",
+          "text-stone-700 dark:text-stone-400 italic text-lg leading-relaxed prose prose-stone dark:prose-invert max-w-none font-serif leading-8",
           report.keyTerms
         )}
       </div>
 
       <div className="space-y-6 relative z-10">
-        {/* Key Terms - Render definitions as Markdown too */}
+        {/* Key Terms */}
         <ReportSection 
           title="Lexicon & Definitions" 
           defaultOpen={true}
@@ -161,9 +252,8 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
               {report.keyTerms.map((term, idx) => (
                 <div key={idx} className="bg-surface-highlight dark:bg-stone-800/50 p-5 rounded-lg border border-stone-100 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-600 transition-colors print:break-inside-avoid relative hover:z-20">
                   <span className="block font-serif font-bold text-lg text-primary dark:text-stone-100 mb-2 border-b border-stone-200 dark:border-stone-700 pb-2 inline-block">{term.term}</span>
-                  {/* Render Definition as Markdown */}
                   <div 
-                    className="text-stone-600 dark:text-stone-300 leading-relaxed text-sm prose prose-sm dark:prose-invert max-w-none"
+                    className="text-stone-600 dark:text-stone-300 leading-relaxed text-sm prose prose-sm dark:prose-invert max-w-none font-body"
                     dangerouslySetInnerHTML={{ __html: renderMarkdownWithTooltips(term.definition, report.keyTerms) }}
                   />
                 </div>
@@ -186,12 +276,18 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
                       <span className="text-stone-300 dark:text-stone-600 font-sans text-lg font-bold">0{idx + 1}</span>
                       {concept.title}
                     </h4>
-                    <div data-html2canvas-ignore="true">
+                    <div className="no-print">
                       <AudioButton text={`${concept.title}. ${concept.explanation}`} label="Read" />
                     </div>
                   </div>
-                  <div className="text-stone-600 dark:text-stone-300 leading-relaxed pl-10 border-l border-stone-200 dark:border-stone-700 group-hover:border-accent transition-colors duration-500">
-                    <ReportSection title="" content={concept.explanation} defaultOpen={true} keyTerms={report.keyTerms} />
+                  <div className="text-stone-600 dark:text-stone-400 leading-relaxed pl-10 border-l border-stone-200 dark:border-stone-700 group-hover:border-accent transition-colors duration-500">
+                    <ReportSection 
+                        title="" 
+                        content={concept.explanation} 
+                        defaultOpen={true} 
+                        keyTerms={report.keyTerms}
+                        contentClassName="leading-8 dark:text-stone-400 font-body"
+                    />
                   </div>
                 </div>
               ))}
@@ -231,6 +327,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
           rawTextForAudio={report.realWorldApplications}
           content={report.realWorldApplications}
           keyTerms={report.keyTerms}
+          contentClassName="font-body"
         />
 
         {/* Summary */}
@@ -240,7 +337,51 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
           rawTextForAudio={report.summary}
           content={report.summary} 
           keyTerms={report.keyTerms}
+          contentClassName="font-body"
         />
+
+        {/* Citations - Overhauled */}
+        {report.citations && report.citations.length > 0 && (
+          <div className="mt-12 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 print:break-inside-avoid">
+             {/* Header */}
+             <div className="bg-stone-50 dark:bg-stone-800/50 px-8 py-6 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between">
+               <h3 className="font-serif font-bold text-xl text-primary dark:text-stone-100 flex items-center gap-3">
+                 <BookOpen className="w-5 h-5 text-accent" />
+                 References & Sources
+               </h3>
+               <span className="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider">
+                  {report.citations.length} Citations
+               </span>
+             </div>
+             
+             {/* List */}
+             <div className="p-8">
+               <ul className="space-y-6">
+                 {report.citations.map((cite, idx) => (
+                   <li key={idx} className="flex gap-4 group">
+                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 flex items-center justify-center font-serif font-bold text-sm group-hover:bg-accent group-hover:text-white transition-colors duration-300">
+                       {idx + 1}
+                     </div>
+                     <div className="flex-1 pt-1 border-b border-stone-100 dark:border-stone-800 pb-6 group-last:border-none group-last:pb-0">
+                       <p className="text-stone-600 dark:text-stone-300 leading-relaxed text-sm md:text-base group-hover:text-primary dark:group-hover:text-white transition-colors mb-2">
+                         {cite}
+                       </p>
+                       <a 
+                        href={`https://www.google.com/search?q=${encodeURIComponent(cite)}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 transition-colors"
+                       >
+                         <span>View Source</span>
+                         <ExternalLink className="w-3 h-3" />
+                       </a>
+                     </div>
+                   </li>
+                 ))}
+               </ul>
+             </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -248,7 +389,26 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
   return (
     <div className="w-full h-full flex flex-col bg-background dark:bg-primary animate-in fade-in slide-in-from-bottom-8 duration-700 transition-colors duration-300">
       
-      {/* Universal Header Actions */}
+      {/* Ask AI Tutor Popup */}
+      {isPopupVisible && (
+        <button
+          onClick={handleAskTutor}
+          onMouseDown={(e) => e.preventDefault()} // Prevent stealing focus
+          style={{
+            position: 'fixed',
+            left: `${popupPos.x}px`,
+            top: `${popupPos.y}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+          className="z-[9999] flex items-center gap-2 px-4 py-2 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-full shadow-xl hover:scale-105 transition-transform animate-in fade-in zoom-in duration-200 border border-stone-700 dark:border-stone-200"
+        >
+          <Sparkles className="w-4 h-4 fill-current text-accent" />
+          <span className="text-xs font-bold tracking-wide">Ask AI Tutor</span>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-stone-900 dark:border-t-white"></div>
+        </button>
+      )}
+
+      {/* Header */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-6 border-b border-stone-200 dark:border-stone-800 flex-shrink-0 bg-white/50 dark:bg-stone-900/50 backdrop-blur-sm z-30 relative">
         <button 
           onClick={onReset}
@@ -275,7 +435,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
         </div>
       </div>
 
-      {/* Mobile Tab Controls */}
+      {/* Mobile Tabs */}
       <div className="md:hidden flex bg-white dark:bg-stone-900 p-2 border-b border-stone-200 dark:border-stone-800 sticky top-0 z-20">
         <div className="flex w-full bg-stone-100 dark:bg-stone-800 rounded-lg p-1">
           <button 
@@ -299,52 +459,43 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
         </div>
       </div>
 
-      {/* Layout Content */}
-      <div className="flex-1 min-h-0 relative overflow-hidden" ref={containerRef}>
+      {/* Unified Main Content Container */}
+      <div className="flex-1 min-h-0 relative overflow-hidden flex flex-row" ref={containerRef}>
         
-        {/* DESKTOP: Split Pane */}
-        <div className="hidden md:flex h-full">
-           {/* Report Scroll Area */}
-           <div 
-             className="h-full overflow-y-auto custom-scrollbar px-6 py-6 md:px-10"
-             style={{ width: `${100 - chatWidth}%` }}
-           >
-              <div className="max-w-4xl mx-auto">
-                <ReportContent />
-              </div>
-           </div>
-           
-           {/* Resizer Handle */}
-           <div 
-            className="w-1 bg-stone-200 dark:bg-stone-800 hover:bg-accent cursor-col-resize flex items-center justify-center transition-colors group relative z-50"
-            onMouseDown={startResizing}
-           >
-             <div className="absolute w-4 h-full bg-transparent"></div> {/* Wider hit area */}
-             <div className="h-8 w-1 rounded-full bg-stone-400 dark:bg-stone-600 group-hover:bg-white transition-colors"></div>
-           </div>
-
-           {/* Chat Fixed Area */}
-           <div 
-             className="h-full bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 shadow-xl dark:shadow-none z-40 relative"
-             style={{ width: `${chatWidth}%` }}
-           >
-             {/* Overlay when resizing to prevent iframe events if there were any */}
-             {isResizing && <div className="absolute inset-0 z-50 bg-transparent cursor-col-resize" />}
-             <ChatInterface report={report} />
-           </div>
+        {/* REPORT PANE */}
+        <div 
+          className={`
+            h-full overflow-y-auto custom-scrollbar px-6 py-6 md:px-10 transition-all duration-75
+            ${activeTab === 'report' ? 'block' : 'hidden'} md:block
+            overflow-x-hidden
+          `}
+          style={{ width: isDesktop ? `${100 - chatWidth}%` : '100%' }}
+        >
+            <div className="max-w-4xl mx-auto">
+              <ReportContent />
+            </div>
         </div>
 
-        {/* MOBILE: Tabbed Views */}
-        <div className="md:hidden h-full overflow-y-auto">
-           {activeTab === 'report' ? (
-             <div className="p-4 pb-20">
-                <ReportContent />
-             </div>
-           ) : (
-             <div className="h-full flex flex-col">
-               <ChatInterface report={report} />
-             </div>
-           )}
+        {/* RESIZER (Desktop) */}
+        <div 
+            className="hidden md:flex w-1 bg-stone-200 dark:bg-stone-800 hover:bg-accent cursor-col-resize items-center justify-center transition-colors group relative z-50"
+            onMouseDown={startResizing}
+        >
+            <div className="absolute w-4 h-full bg-transparent"></div>
+            <div className="h-8 w-1 rounded-full bg-stone-400 dark:bg-stone-600 group-hover:bg-white transition-colors"></div>
+        </div>
+
+        {/* CHAT PANE */}
+        <div 
+            className={`
+                h-full bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 shadow-xl dark:shadow-none z-40 relative
+                ${activeTab === 'chat' ? 'block' : 'hidden'} md:block
+            `}
+            style={{ width: isDesktop ? `${chatWidth}%` : '100%' }}
+        >
+            {isResizing && <div className="absolute inset-0 z-50 bg-transparent cursor-col-resize" />}
+            {/* SINGLE INSTANCE - No ref needed for sending now */}
+            <ChatInterface report={report} />
         </div>
 
       </div>
