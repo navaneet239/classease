@@ -313,9 +313,9 @@ const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ rep
                         </div>
                     </div>
                 ) : (
-                    <div className="text-stone-700 dark:text-stone-300 text-[15px] leading-relaxed">
+                    <div className="text-stone-700 dark:text-stone-300 text-[15px] leading-7">
                         <div 
-                            className={`prose prose-sm dark:prose-invert max-w-none prose-p:text-stone-700 dark:prose-p:text-stone-300 prose-headings:text-primary dark:prose-headings:text-white prose-strong:text-primary dark:prose-strong:text-white prose-a:text-accent prose-code:text-accent prose-code:bg-stone-50 dark:prose-code:bg-stone-800 prose-code:px-1 prose-code:rounded prose-pre:bg-stone-900 prose-pre:text-stone-50`} 
+                            className={`prose prose-sm dark:prose-invert max-w-none prose-p:text-stone-700 dark:prose-p:text-stone-300 prose-headings:text-primary dark:prose-headings:text-white prose-strong:text-primary dark:prose-strong:text-white prose-a:text-accent prose-code:text-accent prose-code:bg-stone-50 dark:prose-code:bg-stone-800 prose-code:px-1 prose-code:rounded prose-pre:bg-stone-900 prose-pre:text-stone-50 font-body`} 
                             dangerouslySetInnerHTML={{ __html: parse(msg.content) as string }} 
                         />
                     </div>

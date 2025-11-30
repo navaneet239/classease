@@ -30,6 +30,7 @@ export interface ChapterReport {
   realWorldApplications: string;
   summary: string;
   teacherRecap: string; // The 100-word smart summary
+  citations: string[]; // List of references/sources
 }
 
 export interface FormData {

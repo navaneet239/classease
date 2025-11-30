@@ -52,7 +52,8 @@ export const generateExplainerReport = async (
    3. Preserve all key technical and syllabus-related terms exactly as they appear.
    4. Structure the explanation into logical sections.
    5. End with a short 100-word "Smart Summary" (teacherRecap) written as if a teacher is explaining aloud to the student.
-   6. Use Markdown formatting for the content (bolding key terms, bullet points, etc.).
+   6. Provide a list of standard academic references or textbooks (e.g. NCERT) relevant to this chapter as citations.
+   7. Use Markdown formatting for the content (bolding key terms, bullet points, etc.).
   `;
 
   // Define the JSON schema for the response
@@ -91,8 +92,13 @@ export const generateExplainerReport = async (
       realWorldApplications: { type: Type.STRING, description: "How this topic applies to real life." },
       summary: { type: Type.STRING, description: "A concise academic summary." },
       teacherRecap: { type: Type.STRING, description: "A conversational 100-word summary for audio narration." },
+      citations: { 
+        type: Type.ARRAY, 
+        items: { type: Type.STRING },
+        description: "List of 3-5 standard academic references, textbooks, or sources relevant to this topic (e.g., NCERT, Standard Reference Books)." 
+      },
     },
-    required: ["chapterTitle", "overview", "keyTerms", "conceptBreakdown", "formulaeOrSteps", "realWorldApplications", "summary", "teacherRecap"],
+    required: ["chapterTitle", "overview", "keyTerms", "conceptBreakdown", "formulaeOrSteps", "realWorldApplications", "summary", "teacherRecap", "citations"],
   };
 
   const promptText = `

@@ -286,7 +286,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
                         content={concept.explanation} 
                         defaultOpen={true} 
                         keyTerms={report.keyTerms}
-                        contentClassName="leading-8 dark:text-stone-400 font-body"
+                        contentClassName="leading-[1.75] dark:text-stone-400 font-body"
                     />
                   </div>
                 </div>
