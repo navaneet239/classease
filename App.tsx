@@ -103,10 +103,11 @@ const App: React.FC = () => {
              >
                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
              </button>
-             <div className="hidden md:flex items-center space-x-2 text-xs font-semibold text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-4 py-2 rounded-full">
-                <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span>Powered by <span className="font-serif">VERRION</span></span>
-             </div>
+             <nav className="hidden md:flex items-center gap-1 text-sm font-medium tracking-wide text-stone-600 dark:text-stone-400">
+                <a href="#pricing" className="font-serif relative px-3 py-1.5 rounded-md hover:text-primary dark:hover:text-white transition-colors after:content-[''] after:absolute after:left-1/2 after:-bottom-0.5 after:w-0 after:h-0.5 after:bg-primary dark:after:bg-white after:transition-all after:duration-300 hover:after:w-1/2 hover:after:left-1/4">Pricing</a>
+                <span className="text-stone-300 dark:text-stone-600 select-none">•</span>
+                <a href="#get-started" className="font-serif relative px-3 py-1.5 rounded-md hover:text-primary dark:hover:text-white transition-colors after:content-[''] after:absolute after:left-1/2 after:-bottom-0.5 after:w-0 after:h-0.5 after:bg-primary dark:after:bg-white after:transition-all after:duration-300 hover:after:w-1/2 hover:after:left-1/4">Get Started</a>
+             </nav>
           </div>
         </div>
       </header>
@@ -119,7 +120,7 @@ const App: React.FC = () => {
           <div className="w-full max-w-6xl mx-auto px-6 pt-12 md:pt-24 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             
             {/* Hero Section */}
-            <div className="text-center mb-16 max-w-4xl mx-auto">
+            <div className="text-center mb-16 max-w-4xl mx-auto" id="hero">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm text-xs font-semibold text-stone-500 dark:text-stone-400 mb-8 animate-in fade-in zoom-in delay-150 duration-700">
                     <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
                     <span>New: Keywords ToolTips</span>
@@ -144,7 +145,16 @@ const App: React.FC = () => {
             </div>
 
             {/* Feature Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 border-t border-stone-100 dark:border-stone-800">
+            <div className="text-center mb-10 pt-12">
+                <h2 className="text-4xl md:text-5xl font-serif font-medium text-primary dark:text-white mb-8 leading-[1.1] tracking-tight">
+                    Features
+                </h2>
+                <p className="text-lg md:text-xl text-stone-600 dark:text-stone-400 font-light max-w-2xl mx-auto leading-relaxed">
+                    Empower your learning with our suite of tools designed to make understanding complex topics easier than ever.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 ">
                 <div className="p-8 rounded-2xl bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 shadow-sm hover:shadow-premium dark:hover:shadow-none hover:border-stone-200 dark:hover:border-stone-700 transition-all duration-300 group cursor-default">
                     <div className="w-12 h-12 bg-stone-50 dark:bg-stone-800 text-primary dark:text-white rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 border border-stone-100 dark:border-stone-700">
                         <Zap className="w-6 h-6 stroke-1" />
@@ -175,6 +185,120 @@ const App: React.FC = () => {
                     </p>
                 </div>
             </div>
+
+
+
+            {/* Pricing Section */}
+            <section id="pricing" className="w-full max-w-6xl mx-auto px-6 pt-20 pb-12 scroll-mt-20">
+              <div className="text-center mb-12">
+                <p className="text-xs text-stone-400 dark:text-stone-600 font-medium uppercase tracking-widest mb-2">Transparent & Flexible</p>
+                <h2 className="text-4xl md:text-5xl font-serif font-medium text-primary dark:text-white mb-4">Choose Your Plan</h2>
+                <p className="text-lg text-stone-500 dark:text-stone-400 max-w-xl mx-auto">Unlock deeper insights and limitless learning—upgrade when you're ready.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                {/* Free Tier */}
+                <div className="relative p-8 flex flex-col rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-lg hover:shadow-xl dark:hover:shadow-none transition-shadow duration-300">
+                  <div className="absolute -top-4 left-8 px-4 py-1 bg-gradient-to-r from-emerald-400 to-teal-500 text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-md">Current</div>
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-serif text-primary dark:text-white mb-2">Starter</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-primary dark:text-white">Free</span>
+                      <span className="text-sm text-stone-400 dark:text-stone-500">/month</span>
+                    </div>
+                  </div>
+                  <ul className="space-y-3 mb-8 text-sm text-stone-600 dark:text-stone-400 flex-1">
+                    <li className="flex items-start gap-3">
+                      <Sparkles className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                      <span>5 chapter analyses per month</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Headphones className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                      <span>Standard AI narration</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <MessageCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                      <span>Community support</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Library className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                      <span>Basic keyword tooltips</span>
+                    </li>
+                  </ul>
+                  <button className="w-full py-3 rounded-xl bg-stone-100 dark:bg-stone-800 text-primary dark:text-white font-semibold hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors" disabled>
+                    Current Plan
+                  </button>
+                </div>
+
+                {/* Pro Tier */}
+                <div className="relative p-8 flex flex-col rounded-3xl bg-gradient-to-br from-primary to-accent text-white shadow-2xl hover:shadow-accent/30 dark:hover:shadow-none transition-shadow duration-300">
+                  <div className="absolute border -top-4 left-8 px-4 py-1 bg-accent/20 backdrop-blur-sm text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-md">Popular</div>
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-serif mb-2">Pro</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold">$9</span>
+                      <span className="text-sm opacity-80">/month</span>
+                    </div>
+                  </div>
+                  <ul className="space-y-3 mb-8 text-sm flex-1">
+                    <li className="flex items-start gap-3">
+                      <Zap className="w-4 h-4 text-yellow-300 mt-0.5 shrink-0" />
+                      <span>Unlimited chapter analyses</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Headphones className="w-4 h-4 text-yellow-300 mt-0.5 shrink-0" />
+                      <span>Premium neural voices + multi-language</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <BrainCircuit className="w-4 h-4 text-yellow-300 mt-0.5 shrink-0" />
+                      <span>Advanced concept maps & quizzes</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <MessageCircle className="w-4 h-4 text-yellow-300 mt-0.5 shrink-0" />
+                      <span>Priority chat support + tutor mode</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Library className="w-4 h-4 text-yellow-300 mt-0.5 shrink-0" />
+                      <span>Export notes to PDF & Anki flashcards</span>
+                    </li>
+                  </ul>
+                  <button className="w-full py-3 rounded-xl bg-white text-primary font-semibold hover:bg-stone-100 transition-colors shadow-lg">
+                    Upgrade to Pro
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-center mt-10">
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  Cancel anytime. Secure payment.
+                </p>
+              </div>
+            </section>
+
+            {/* CTA Section */}
+            <section id="get-started" className=" border border-stone-100 dark:border-stone-800 w-full max-w-6xl mx-auto px-6 pt-20 pb-12 scroll-mt-20 bg-primary rounded-3xl">
+              <div className="text-center mb-4">
+                <p className="text-xs text-stone-400 dark:text-stone-600 font-medium uppercase tracking-widest mb-2">Ready to Learn Smarter?</p>
+                <h2 className="text-4xl md:text-5xl font-serif font-medium text-white mb-4">Get Started in Seconds</h2>
+                <p className="text-lg text-stone-500 dark:text-stone-400 max-w-xl mx-auto">Upload your first chapter and experience the future of studying, free forever on the Starter plan.</p>
+              </div>
+
+              <div className="flex flex-col items-center gap-6">
+                <button
+                  onClick={() => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="group relative inline-flex items-center justify-center px-10 py-4 text-white font-semibold tracking-wide rounded-2xl shadow-lg overflow-hidden transition-all duration-500 ease-out bg-gradient-to-br from-primary via-accent to-primary bg-[length:200%_200%] hover:bg-right hover:shadow-2xl hover:-translate-y-1 active:scale-[0.98]"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
+                  <span className="relative z-10">Upload Chapter Now</span>
+                  <span className="ml-3 w-0 group-hover:w-5 overflow-hidden transition-all duration-300 ease-out">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </span>
+                </button>
+                <p className="text-sm text-stone-400 dark:text-stone-500">No credit card required • Instant results</p>
+              </div>
+            </section>
             
             {/* Footer */}
             <div className="mt-20 text-center">
