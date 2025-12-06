@@ -5,6 +5,8 @@ import ChatInterface from './ChatInterface';
 import { Download, ArrowLeft, FileText, Loader2, Bookmark, MessageSquare, BookOpen, Book, Sparkles, ExternalLink } from 'lucide-react';
 import AudioButton from './AudioButton';
 import { renderMarkdownWithTooltips } from '../utils/textUtils';
+import { pdf } from '@react-pdf/renderer';
+import PDFDocument from './PDFDocument';
 
 interface ReportViewProps {
   report: ChapterReport;
@@ -158,28 +160,18 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
 
   const handlePdfDownload = async () => {
     setIsDownloadingPdf(true);
-    const element = document.getElementById('report-content');
-    
-    // Configure html2pdf options
-    const opt = {
-      margin: [10, 10], // top, left, bottom, right
-      filename: `${report.chapterTitle.replace(/\s+/g, '_')}_Explainer.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true,
-        ignoreElements: (element: any) => element.classList.contains('no-print') 
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
-
     try {
-      // @ts-ignore
-      await html2pdf().set(opt).from(element).save();
+      // Use @react-pdf/renderer to create a blob
+      const blob = await pdf(<PDFDocument report={report} inputData={inputData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${report.chapterTitle.replace(/\s+/g, '_')}_Explainer.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("PDF generation failed:", error);
-      alert("Failed to generate PDF.");
+      alert("Failed to generate PDF. Please try again.");
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -218,7 +210,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
           <h1 className="text-3xl md:text-5xl font-serif font-medium mb-6 leading-tight tracking-tight text-white">{report.chapterTitle}</h1>
           {renderMarkdown(
             report.overview, 
-            "text-stone-300 text-base md:text-lg leading-relaxed prose prose-invert prose-p:text-stone-300/90 prose-strong:text-white prose-headings:text-white",
+            "text-stone-300 text-base md:text-lg leading-relaxed prose prose-invert prose-p:text-stone-300/90 prose-strong:text-white prose-headings:text-white font-body",
             report.keyTerms
           )}
         </div>
@@ -306,13 +298,17 @@ const ReportView: React.FC<ReportViewProps> = ({ report, inputData, onReset }) =
                 {report.formulaeOrSteps.map((item, idx) => (
                   <li 
                     key={idx} 
-                    className="bg-stone-900 dark:bg-stone-950 text-stone-300 p-4 rounded-lg font-mono text-sm md:text-base print:break-inside-avoid shadow-inner relative border border-stone-800 group hover:z-30 transition-all"
+                    className="bg-stone-900 dark:bg-stone-950 text-stone-300 rounded-lg font-mono text-sm md:text-base print:break-inside-avoid shadow-inner relative border border-stone-800 group hover:z-30 transition-all overflow-hidden"
                   >
-                    <div className="absolute top-0 left-0 w-1 h-full bg-accent"></div>
-                    <span 
-                       className="inline-block prose prose-invert prose-sm max-w-none prose-p:my-0 relative"
-                       dangerouslySetInnerHTML={{ __html: renderMarkdownWithTooltips(item, report.keyTerms) }} 
-                    />
+                    <div className="absolute top-0 left-0 w-1 h-full bg-accent z-10"></div>
+                    <div className="p-4 overflow-x-auto">
+                      <pre className="font-mono whitespace-pre-wrap leading-relaxed">
+                        <span 
+                           className="inline-block relative"
+                           dangerouslySetInnerHTML={{ __html: renderMarkdownWithTooltips(item, report.keyTerms) }} 
+                        />
+                      </pre>
+                    </div>
                   </li>
                 ))}
               </ul>

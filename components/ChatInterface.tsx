@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Send, User, Sparkles, Loader2, Bot, Trash2, Copy, RefreshCw, Pencil } from 'lucide-react';
+import { Send, User, Sparkles, Loader2, Bot, Trash2, Copy, RefreshCw, Pencil, ChevronRight } from 'lucide-react';
 import { ChapterReport } from '../types';
 import { createChatSession, ChatSession } from '../services/geminiService';
 import { parse } from 'marked';
@@ -19,6 +19,13 @@ export interface ChatInterfaceHandle {
   sendQuery: (text: string) => void;
   focus: () => void;
 }
+
+const SUGGESTED_QUESTIONS = [
+    "Create a quiz for me",
+    "create a mindmap with boxes",
+    "Explain the hardest concept",
+    "Summarize in bullet points"
+];
 
 const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ report }, ref) => {
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
@@ -70,22 +77,36 @@ const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ rep
     }
   }));
 
-  // Initialize Chat
+  // Initialize Chat and Mindmap
   useEffect(() => {
-    initChat([]);
-  }, [report]);
+    const initChat = async () => {
+        setMessages([]); // Reset messages
+        
+        // Convert local messages to Gemini Content format (empty at start)
+        const geminiHistory: Content[] = [];
+        const session = createChatSession(report, geminiHistory);
+        setChatSession(session);
 
-  const initChat = (history: Message[]) => {
-    // Convert local messages to Gemini Content format
-    const geminiHistory: Content[] = history.map(m => ({
-        role: m.role,
-        parts: [{ text: m.content }]
-    }));
-    
-    const session = createChatSession(report, geminiHistory);
-    setChatSession(session);
-    setMessages(history);
-  };
+        // Auto-generate mindmap
+        setIsLoading(true);
+        try {
+            // We do NOT add this prompt to the 'messages' state because the user didn't type it.
+            // We just want the model's response to appear as the first message.
+            const initialPrompt = "Create a concise text-based conceptual flowchart or mindmap using Markdown tree syntax (use lines like │ ├ ─) to structure the key topics of this chapter. Start directly with the map.";
+            
+            const response = await session.sendMessage(initialPrompt);
+            setMessages([{ role: 'model', content: response }]);
+        } catch (e) {
+            console.error("Failed to generate initial mindmap", e);
+            // Fallback welcome message
+            setMessages([{ role: 'model', content: "Hello! I'm your AI tutor. Ask me anything about this chapter." }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    initChat();
+  }, [report]);
 
   // LISTENER FOR ASK TUTOR POPUP
   useEffect(() => {
@@ -127,7 +148,18 @@ const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ rep
 
   const handleClearChat = () => {
     if (window.confirm("Clear conversation history?")) {
-      initChat([]);
+      // Re-run init to regenerate mindmap or just clear?
+      // Let's just clear to empty state for now or re-run init.
+      // Re-running init gives the mindmap again which is nice.
+       setMessages([]);
+       setIsLoading(true);
+       const session = createChatSession(report, []);
+       setChatSession(session);
+       session.sendMessage("Create a concise text-based conceptual flowchart or mindmap using Markdown tree syntax (use lines like │ ├ ─) to structure the key topics of this chapter.")
+       .then(res => {
+           setMessages([{role: 'model', content: res}]);
+       })
+       .finally(() => setIsLoading(false));
     }
   };
 
@@ -243,11 +275,10 @@ const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ rep
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-8 scroll-smooth custom-scrollbar">
         
-        {messages.length === 0 && (
+        {messages.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full text-center text-stone-300 dark:text-stone-600 p-8">
                 <Bot size={48} strokeWidth={1} className="mb-4 text-stone-200 dark:text-stone-700" />
-                <p className="text-sm font-medium text-stone-400 dark:text-stone-500">Ask me anything about the chapter.</p>
-                <p className="text-xs mt-2 text-stone-300 dark:text-stone-600 max-w-xs">I can explain concepts, quiz you, or help you solve problems.</p>
+                <p className="text-sm font-medium text-stone-400 dark:text-stone-500">Preparing your personalized tutor...</p>
             </div>
         )}
 
@@ -313,9 +344,9 @@ const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ rep
                         </div>
                     </div>
                 ) : (
-                    <div className="text-stone-700 dark:text-stone-300 text-[15px] leading-7">
+                    <div className="text-stone-700 dark:text-stone-300 text-[15px] leading-relaxed">
                         <div 
-                            className={`prose prose-sm dark:prose-invert max-w-none prose-p:text-stone-700 dark:prose-p:text-stone-300 prose-headings:text-primary dark:prose-headings:text-white prose-strong:text-primary dark:prose-strong:text-white prose-a:text-accent prose-code:text-accent prose-code:bg-stone-50 dark:prose-code:bg-stone-800 prose-code:px-1 prose-code:rounded prose-pre:bg-stone-900 prose-pre:text-stone-50 font-body`} 
+                            className={`prose prose-sm dark:prose-invert max-w-none prose-p:text-stone-700 dark:prose-p:text-stone-300 prose-headings:text-primary dark:prose-headings:text-white prose-strong:text-primary dark:prose-strong:text-white prose-a:text-accent prose-code:text-accent prose-code:bg-stone-50 dark:prose-code:bg-stone-800 prose-code:px-1 prose-code:rounded prose-pre:bg-stone-900 prose-pre:text-stone-50`} 
                             dangerouslySetInnerHTML={{ __html: parse(msg.content) as string }} 
                         />
                     </div>
@@ -343,6 +374,22 @@ const ChatInterface = forwardRef<ChatInterfaceHandle, ChatInterfaceProps>(({ rep
 
       {/* Input Area */}
       <div className="p-4 md:p-6 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-10 transition-colors duration-300">
+        
+        {/* Suggested Questions */}
+        {!isLoading && (
+            <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
+                {SUGGESTED_QUESTIONS.map((q, i) => (
+                    <button
+                        key={i}
+                        onClick={() => processMessage(q)}
+                        className="flex-shrink-0 px-3 py-1.5 bg-stone-50 dark:bg-stone-800 border border-stone-100 dark:border-stone-700 hover:border-accent/30 dark:hover:border-accent/50 text-xs text-stone-600 dark:text-stone-400 hover:text-primary dark:hover:text-stone-200 rounded-full transition-all whitespace-nowrap"
+                    >
+                        {q}
+                    </button>
+                ))}
+            </div>
+        )}
+
         <form onSubmit={handleSendMessage} className="relative">
             <input
                 ref={inputRef}
